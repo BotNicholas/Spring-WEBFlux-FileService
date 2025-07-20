@@ -1,0 +1,14 @@
+${AnsiBackground.BLACK}${AnsiColor.BRIGHT_GREEN} ╔══════════════════════════════════════════════════════════════════════════════════════╗ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║   ███████╗██╗██╗     ███████╗    ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗    ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║   ██╔════╝██║██║     ██╔════╝    ██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗   ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║   █████╗  ██║██║     █████╗      ███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝   ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║   ██╔══╝  ██║██║     ██╔══╝      ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗   ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║   ██║     ██║███████╗███████╗    ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║   ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║   ╚═╝     ╚═╝╚══════╝╚══════╝    ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝   ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ╠══════════════════════╦═══════════════════════════════════════════════════════════════╣ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║  Application Name:   ║                         ${AnsiColor.BRIGHT_BLUE}${application.title}${AnsiColor.BRIGHT_GREEN}                            ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ╠══════════════════════╬═══════════════════════════════════════════════════════════════╣ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║       Version:       ║                          ${AnsiColor.BRIGHT_BLUE}${application.formatted-version}${AnsiColor.BRIGHT_GREEN}                             ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ╠══════════════════════╬═══════════════════════════════════════════════════════════════╣ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ║ Spring Boot Version: ║                         ${AnsiColor.BRIGHT_BLUE}${spring-boot.formatted-version}${AnsiColor.BRIGHT_GREEN}                             ║ ${AnsiBackground.DEFAULT}
+${AnsiBackground.BLACK} ╚══════════════════════╩═══════════════════════════════════════════════════════════════╝ ${AnsiBackground.DEFAULT}${AnsiColor.DEFAULT}
