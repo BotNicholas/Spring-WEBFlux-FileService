@@ -34,6 +34,7 @@ import javax.imageio.ImageIO;
 
 @Service
 public class FilesService {
+    //todo: get all the files if user has admin authority
     @Value("${home.dir}")
     private String homeDir;
     @Value("${resources.dir}")

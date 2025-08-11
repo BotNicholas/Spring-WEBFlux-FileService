@@ -6,6 +6,7 @@ import org.example.videoviewer.utils.jwt.AuthService;
 import org.example.videoviewer.utils.jwt.dto.JwtRefreshRequest;
 import org.example.videoviewer.utils.jwt.dto.JwtRequest;
 import org.example.videoviewer.utils.jwt.dto.JwtResponse;
+import org.example.videoviewer.utils.jwt.dto.OneTimeCodeRequest;
 import org.example.videoviewer.utils.jwt.dto.RegistrationRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +28,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@RequestBody JwtRequest loginRequest) {
         return ResponseEntity.ok(authService.login(loginRequest));
+    }
+
+    @PostMapping("/exchange-one-time-code")
+    public ResponseEntity<JwtResponse> exchangeOneTimeCode(@RequestBody OneTimeCodeRequest oneTimeCodeRequest) {
+        return ResponseEntity.ok(authService.exchangeOneTimeCode(oneTimeCodeRequest));
     }
 
     @PostMapping("/refresh-access")

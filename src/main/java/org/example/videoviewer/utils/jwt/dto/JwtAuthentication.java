@@ -18,7 +18,7 @@ import java.util.Set;
 @Builder
 public class JwtAuthentication implements Authentication {
     private String username;
-    private Set<String> roles;
+    private List<String> roles;
     private boolean authenticated;
 
     @Override
