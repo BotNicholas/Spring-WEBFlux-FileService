@@ -45,4 +45,5 @@ public class Users {
     private String password;
     @Column(name = "onetimetoken")
     private String oneTimeToken;
+    private Boolean verified;
 }

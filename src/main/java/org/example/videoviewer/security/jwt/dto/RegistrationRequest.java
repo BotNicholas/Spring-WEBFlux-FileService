@@ -1,4 +1,4 @@
-package org.example.videoviewer.utils.jwt.dto;
+package org.example.videoviewer.security.jwt.dto;
 
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;

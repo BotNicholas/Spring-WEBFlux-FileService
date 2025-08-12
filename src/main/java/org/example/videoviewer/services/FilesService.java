@@ -1,5 +1,6 @@
 package org.example.videoviewer.services;
 
+import org.example.videoviewer.enums.Roles;
 import org.example.videoviewer.exceptions.FileExistsException;
 import org.example.videoviewer.exceptions.FileNotFoundException;
 import org.example.videoviewer.exceptions.WrongMetadataException;
@@ -7,6 +8,7 @@ import org.example.videoviewer.models.CreateFileRequest;
 import org.example.videoviewer.models.FileType;
 import org.example.videoviewer.models.FilesRequest;
 import org.example.videoviewer.models.PageFilesResponse;
+import org.example.videoviewer.security.jwt.dto.JwtAuthentication;
 import org.example.videoviewer.utils.NaturalOrderComparator;
 import org.imgscalr.Scalr;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -179,11 +183,15 @@ public class FilesService {
     }
 
     private String getPath(String path) {
-        if (!homeDir.substring(homeDir.length() - 1).equals("/")) {
-            return homeDir + "/" + path.replaceFirst("/", "");
+        var user = (JwtAuthentication) SecurityContextHolder.getContext().getAuthentication();
+        var isAdmin = user.getAuthorities().stream().anyMatch((GrantedAuthority a) -> a.getAuthority().equals(Roles.ADMIN.name()));
+        var root = isAdmin ? homeDir : homeDir + "/" + user.getUsername();
+
+        if (!root.substring(root.length() - 1).equals("/")) {
+            return root + "/" + path.replaceFirst("/", "");
         }
 
-        return homeDir + path.replaceFirst("/", "");
+        return root + path.replaceFirst("/", "");
     }
 
     public Resource getImage(String filePath, FileType type) {

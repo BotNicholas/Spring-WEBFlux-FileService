@@ -1,4 +1,4 @@
-package org.example.videoviewer.utils.jwt;
+package org.example.videoviewer.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
