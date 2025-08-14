@@ -1,14 +1,19 @@
 package org.example.videoviewer.services;
 
 import io.micrometer.common.util.StringUtils;
+import lombok.RequiredArgsConstructor;
+import org.example.videoviewer.enums.Roles;
+import org.example.videoviewer.exceptions.UserNotFoundException;
 import org.example.videoviewer.models.File;
 import org.example.videoviewer.models.FileType;
+import org.example.videoviewer.repositories.model.Users;
 import org.example.videoviewer.services.models.VideoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -21,7 +26,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
+@RequiredArgsConstructor
 public class VideoService {
+    private final UsersService usersService;
+
 //    private static final String VIDEO_FILE = "C:/Users/Nicholas/Documents/%s.mp4";
 //
 ////    @Autowired
@@ -49,7 +57,10 @@ private String homeDir;
 
     public VideoResponse getVideo(final String videoPath,
                                           final String range) throws IOException {
-        var filePath = Paths.get(getPath(videoPath));
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
+        var filePath = Paths.get(getPath(videoPath, user));
         var totalBytes = Files.size(filePath);
         var start = 0L;
         var end = totalBytes - 1;
@@ -78,11 +89,19 @@ private String homeDir;
         return new VideoResponse(response, start, end, totalBytes);
     }
 
-    private String getPath(String path) {
-        if (!homeDir.substring(homeDir.length() - 1).equals("/")) {
-            return homeDir + "/" + path.replaceFirst("/", "");
+    private String getRoot(final Users user) {
+        var isAdmin = user.getRoles().contains(Roles.ADMIN);
+
+        return isAdmin ? homeDir : homeDir + "/" + user.getUsername();
+    }
+
+    private String getPath(final String path, final Users user) {
+        var root = getRoot(user);
+
+        if (!root.substring(root.length() - 1).equals("/")) {
+            return root + "/" + path.replaceFirst("/", "");
         }
 
-        return homeDir + path.replaceFirst("/", "");
+        return root + path.replaceFirst("/", "");
     }
 }

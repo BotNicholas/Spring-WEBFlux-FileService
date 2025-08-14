@@ -3,12 +3,11 @@ package org.example.videoviewer.services;
 import org.example.videoviewer.enums.Roles;
 import org.example.videoviewer.exceptions.FileExistsException;
 import org.example.videoviewer.exceptions.FileNotFoundException;
-import org.example.videoviewer.exceptions.WrongMetadataException;
-import org.example.videoviewer.models.CreateFileRequest;
+import org.example.videoviewer.exceptions.UserNotFoundException;
 import org.example.videoviewer.models.FileType;
 import org.example.videoviewer.models.FilesRequest;
 import org.example.videoviewer.models.PageFilesResponse;
-import org.example.videoviewer.security.jwt.dto.JwtAuthentication;
+import org.example.videoviewer.repositories.model.Users;
 import org.example.videoviewer.utils.NaturalOrderComparator;
 import org.imgscalr.Scalr;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +31,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import javax.imageio.ImageIO;
 
@@ -45,11 +43,18 @@ public class FilesService {
     private String resourcesDir;
     @Autowired
     private FFMpegImageExtractor imageExtractor;
+    @Autowired
+    private UsersService usersService;
 
-    public PageFilesResponse getFiles(String path, long page, long size) {
+    public PageFilesResponse getFiles(final String path,
+                                      final long page,
+                                      final long size) {
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
         PageFilesResponse response = new PageFilesResponse();
 
-        File dir = new File(getPath(path));
+        File dir = new File(getPath(path, user));
 
         if (dir.exists() && dir.isDirectory()) {
             var filesList = Arrays.stream(dir.listFiles()).map(f -> {
@@ -59,7 +64,7 @@ public class FilesService {
 
                     return new org.example.videoviewer.models.File(
                             f.getName(),
-                            f.getPath().replaceAll("\\\\", "/").replace(homeDir, ""),
+                            f.getPath().replaceAll("\\\\", "/").replace(getRoot(user), ""),
                             FileType.getTypeFor(mimeType),
                             mimeType,
                             f.getTotalSpace());
@@ -88,7 +93,10 @@ public class FilesService {
     }
 
     public ResponseEntity<FileSystemResource> getFile(String path) throws IOException {
-        Path filePath = Paths.get(getPath(path));
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
+        Path filePath = Paths.get(getPath(path, user));
 
         if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
             throw new IllegalArgumentException("File '" + filePath.getFileName() + "' can not be downloaded!");
@@ -100,8 +108,10 @@ public class FilesService {
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(mimeType)).body(new FileSystemResource(filePath));
     }
 
-    public ResponseEntity<org.example.videoviewer.models.File> createDirectoryAt(final String path, final String dirName) throws IOException {
-        var normalizedPath = Paths.get(getPath(path), dirName);
+    public ResponseEntity<org.example.videoviewer.models.File> createDirectoryAtForUser(final String path,
+                                                                                        final String dirName,
+                                                                                        final Users user) throws IOException {
+        var normalizedPath = Paths.get(getPath(path, user), dirName);
         if (Files.exists(normalizedPath) && Files.isDirectory(normalizedPath)) {
             throw new FileExistsException(dirName);
         }
@@ -110,7 +120,7 @@ public class FilesService {
         var dir = new File(dirPath.toUri());
 
         var dirResponse = new org.example.videoviewer.models.File(dir.getName(),
-                dir.getPath().replaceAll("\\\\", "/").replace(homeDir, ""),
+                dir.getPath().replaceAll("\\\\", "/").replace(getRoot(user), ""),
                 FileType.DIRECTORY,
                 Files.probeContentType(dirPath),
                 dir.getTotalSpace());
@@ -120,19 +130,18 @@ public class FilesService {
     }
 
     public ResponseEntity<List<org.example.videoviewer.models.File>> importFiles(final FilesRequest request, final List<MultipartFile> files) throws IOException {
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
         var filesList = new ArrayList<org.example.videoviewer.models.File>();
         for (MultipartFile file : files) {
-            filesList.add(importFile(request, file).getBody());
+            filesList.add(importFile(request, file, user).getBody());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(filesList);
     }
 
-    public ResponseEntity<org.example.videoviewer.models.File> importFile(final FilesRequest metadata, final MultipartFile file) throws IOException {
-        var normalizedPath = Paths.get(getPath(metadata.getPath()), file.getOriginalFilename());
-
-//        if (!file.getOriginalFilename().matches(String.format("%s\\..+", metadata.getName()))) {
-//            throw new WrongMetadataException(String.format("'%s' File name from metadata does not match actual file name '%s'.", metadata.getName(), getFileName(file.getOriginalFilename())));
-//        }
+    private ResponseEntity<org.example.videoviewer.models.File> importFile(final FilesRequest metadata, final MultipartFile file, final Users user) throws IOException {
+        var normalizedPath = Paths.get(getPath(metadata.getPath(), user), file.getOriginalFilename());
 
         if (Files.exists(normalizedPath)) {
             throw new FileExistsException(file.getOriginalFilename());
@@ -144,7 +153,7 @@ public class FilesService {
         var mimetype = Files.probeContentType(newFilePath);
 
         var fileResponse = new org.example.videoviewer.models.File(newFile.getName(),
-                newFile.getPath().replaceAll("\\\\", "/").replace(homeDir, ""),
+                newFile.getPath().replaceAll("\\\\", "/").replace(getRoot(user), ""),
                 FileType.getTypeFor(mimetype),
                 mimetype,
                 newFile.getTotalSpace());
@@ -153,7 +162,10 @@ public class FilesService {
     }
 
     public ResponseEntity<Void> deleteFile(final String path) throws IOException {
-        var normalizedPath = Paths.get(getPath(path));
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
+        var normalizedPath = Paths.get(getPath(path, user));
 
         if (!Files.exists(normalizedPath)) {
             throw new FileNotFoundException(normalizedPath.getFileName().toString());
@@ -182,10 +194,8 @@ public class FilesService {
         return fileName.substring(0, fileName.lastIndexOf("."));
     }
 
-    private String getPath(String path) {
-        var user = (JwtAuthentication) SecurityContextHolder.getContext().getAuthentication();
-        var isAdmin = user.getAuthorities().stream().anyMatch((GrantedAuthority a) -> a.getAuthority().equals(Roles.ADMIN.name()));
-        var root = isAdmin ? homeDir : homeDir + "/" + user.getUsername();
+    private String getPath(final String path, final Users user) {
+        var root = getRoot(user);
 
         if (!root.substring(root.length() - 1).equals("/")) {
             return root + "/" + path.replaceFirst("/", "");
@@ -194,13 +204,25 @@ public class FilesService {
         return root + path.replaceFirst("/", "");
     }
 
+    private String getRoot(final Users user) {
+        var isAdmin = user.getRoles().contains(Roles.ADMIN);
+
+        return isAdmin ? homeDir : homeDir + "/" + user.getUsername();
+    }
+
     public Resource getImage(String filePath, FileType type) {
-        Path path = getCorrectFileImagePath(filePath, type);
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
+        Path path = getCorrectFileImagePath(filePath, type, user);
         return new FileSystemResource(path);
     }
 
     public Resource getScaledImage(String filePath, FileType type) throws IOException {
-        Path path = getCorrectFileImagePath(filePath, type);
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
+        Path path = getCorrectFileImagePath(filePath, type, user);
         var image = Scalr.resize(ImageIO.read(path.toFile()), Scalr.Method.SPEED, Scalr.Mode.AUTOMATIC, 320, 180, Scalr.OP_ANTIALIAS);
         var baos = new ByteArrayOutputStream();
         ImageIO.write(image, "png", baos);
@@ -208,32 +230,40 @@ public class FilesService {
     }
 
     public ResponseEntity<Resource> getImageResponse(String filePath, FileType type) throws IOException, InterruptedException {
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
         ResponseEntity<Resource> response;
 
         if (!FileType.VIDEO.equals(type)) {
-            Path path = getCorrectFileImagePath(filePath, type);
+            Path path = getCorrectFileImagePath(filePath, type, user);
             response = ResponseEntity.ok().contentType(MediaType.parseMediaType(Files.probeContentType(path))).body(getImage(filePath, type));
         } else {
-            response =  ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(new ByteArrayResource(getFirstVideoFrameBytes(filePath)));
+            response =  ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(new ByteArrayResource(getFirstVideoFrameBytes(filePath, user)));
         }
 
         return response;
     }
 
     public ResponseEntity<Resource> getScaledImageResponse(String filePath, FileType type) throws IOException, InterruptedException {
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+
         ResponseEntity<Resource> response;
 
         if (!FileType.VIDEO.equals(type)) {
-            Path path = getCorrectFileImagePath(filePath, type);
+            Path path = getCorrectFileImagePath(filePath, type, user);
             response = ResponseEntity.ok().contentType(MediaType.parseMediaType(Files.probeContentType(path))).body(getScaledImage(filePath, type));
         } else {
-            response =  ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(new ByteArrayResource(getScaledFirstVideoFrameBytes(filePath)));
+            response =  ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(new ByteArrayResource(getScaledFirstVideoFrameBytes(filePath, user)));
         }
 
         return response;
     }
 
-    private Path getCorrectFileImagePath(String filePath, FileType type) {
+    private Path getCorrectFileImagePath(final String filePath,
+                                         final FileType type,
+                                         final Users user) {
         switch (type) {
             case DIRECTORY:
                 return Paths.get(getImagesDir() + "/default/folder.png");
@@ -242,18 +272,20 @@ public class FilesService {
             case PDF_FILE:
                 return Paths.get(getImagesDir() + "/default/pdf.png");
             case IMAGE:
-                return Paths.get(getPath(filePath));
+                return Paths.get(getPath(filePath, user));
             default:
                 return Paths.get(getImagesDir() + "/default/file.png");
         }
     }
 
-    private byte[] getFirstVideoFrameBytes(String filePath) throws IOException, InterruptedException {
-        return imageExtractor.getFirstFrameFromVideo(getPath(filePath), getImagesDir());
+    private byte[] getFirstVideoFrameBytes(final String filePath,
+                                           final Users user) throws IOException, InterruptedException {
+        return imageExtractor.getFirstFrameFromVideo(getPath(filePath, user), getImagesDir());
     }
 
-    private byte[] getScaledFirstVideoFrameBytes(String filePath) throws IOException, InterruptedException {
-        return imageExtractor.getScaledFirstFrameFromVideo(getPath(filePath), getImagesDir());
+    private byte[] getScaledFirstVideoFrameBytes(final String filePath,
+                                                 final Users user) throws IOException, InterruptedException {
+        return imageExtractor.getScaledFirstFrameFromVideo(getPath(filePath, user), getImagesDir());
     }
 
     private String getImagesDir() {

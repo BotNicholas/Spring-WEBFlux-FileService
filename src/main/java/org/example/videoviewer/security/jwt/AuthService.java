@@ -20,11 +20,9 @@ import org.example.videoviewer.security.jwt.dto.RegistrationRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileAlreadyExistsException;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -156,7 +154,7 @@ public class AuthService {
     private void createUserFolder(final Users user) throws IOException {
         if (!user.getRoles().contains(Roles.ADMIN) && !user.getVerified()) {
             try {
-                filesService.createDirectoryAt("/", user.getUsername());
+                filesService.createDirectoryAtForUser("/", "", user);
             } catch (FileExistsException e) {
                 log.warn("Skipping folder creation for user {} - folder already exists", user.getUsername());
             }

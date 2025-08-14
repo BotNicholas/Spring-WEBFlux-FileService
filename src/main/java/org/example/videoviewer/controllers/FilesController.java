@@ -1,41 +1,47 @@
 package org.example.videoviewer.controllers;
 
+import lombok.RequiredArgsConstructor;
+import org.example.videoviewer.exceptions.FileNotFoundException;
+import org.example.videoviewer.exceptions.UserNotFoundException;
 import org.example.videoviewer.models.CreateDirectoryRequest;
-import org.example.videoviewer.models.CreateFileRequest;
 import org.example.videoviewer.models.File;
 import org.example.videoviewer.models.FileType;
 import org.example.videoviewer.models.FilesRequest;
 import org.example.videoviewer.models.FilesResponse;
 import org.example.videoviewer.models.PageFilesResponse;
+import org.example.videoviewer.security.jwt.dto.JwtAuthentication;
 import org.example.videoviewer.services.FilesService;
+import org.example.videoviewer.services.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Base64;
 import java.util.List;
 
 @CrossOrigin(origins = "*", exposedHeaders = "*")
 @RestController
 @RequestMapping("/files")
+@RequiredArgsConstructor
 public class FilesController {
-    @Autowired
-    FilesService filesService;
+    private final FilesService filesService;
+    private final UsersService usersService;
 
     @PostMapping
-    public ResponseEntity<FilesResponse> getFiles(@RequestBody FilesRequest request, @RequestParam long page, @RequestParam long size) {
+    public ResponseEntity<FilesResponse> getFiles(final @RequestBody FilesRequest request,
+                                                  final @RequestParam long page,
+                                                  final @RequestParam long size,
+                                                  final JwtAuthentication authentication) {
         request.setPath(normalizePath(request.getPath()));
-        page = page<1 ? 1 : page;
-        size = size<1 ? 1 : size;
-        var pageResponse = filesService.getFiles(request.getPath(), page, size);
+        var normalizedPage = page<1 ? 1 : page;
+        var normalizedSize = size<1 ? 1 : size;
+        var pageResponse = filesService.getFiles(request.getPath(), normalizedPage, normalizedSize);
         return ResponseEntity.ok().headers(getPageHeaders(pageResponse)).body(new FilesResponse(pageResponse.getFiles()));
     }
 
@@ -44,7 +50,7 @@ public class FilesController {
         return filesService.getFile(request.getPath());
     }
 
-    private HttpHeaders getPageHeaders(PageFilesResponse response) {
+    private HttpHeaders getPageHeaders(final PageFilesResponse response) {
         HttpHeaders headers = new HttpHeaders();
 
         headers.put("P-Total-Elements", List.of(String.valueOf(response.getTotalElements())));
@@ -60,7 +66,11 @@ public class FilesController {
     @GetMapping("/image")
     public ResponseEntity<Resource> loadImage(@RequestParam("path") String filePath, @RequestParam("type")FileType type) throws IOException, InterruptedException {
         try {
-            return filesService.getImageResponse(new String(Base64.getDecoder().decode(filePath)), type);
+            var response = filesService.getImageResponse(new String(Base64.getDecoder().decode(filePath)), type);
+            if (!response.getBody().exists()) {
+                throw new FileNotFoundException(String.format("File '%S' not found", filePath));
+            }
+            return response;
         } catch (Exception e) {
             if (e.getMessage().contains("Illegal base64 character")) {
                 throw new RuntimeException("Illegal base64 encoding");
@@ -73,7 +83,7 @@ public class FilesController {
     public ResponseEntity<Resource> loadImagePreview(@RequestParam("path") String filePath, @RequestParam("type")FileType type) throws IOException, InterruptedException {
         try {
             return filesService.getScaledImageResponse(new String(Base64.getDecoder().decode(filePath)), type);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("Illegal base64 character")) {
                 throw new RuntimeException("Illegal base64 encoding");
             }
@@ -82,8 +92,10 @@ public class FilesController {
     }
 
     @PostMapping("/create/directory")
-    public ResponseEntity<File> createDirectory(@RequestBody CreateDirectoryRequest request) throws IOException {
-        return filesService.createDirectoryAt(request.getPath(), request.getName());
+    public ResponseEntity<File> createDirectory(final @RequestBody CreateDirectoryRequest request,
+                                                final JwtAuthentication authentication) throws IOException {
+        var user = usersService.getByUsername(authentication.getUsername()).orElseThrow(UserNotFoundException::new);
+        return filesService.createDirectoryAtForUser(request.getPath(), request.getName(), user);
     }
 
     @PostMapping("/import")
