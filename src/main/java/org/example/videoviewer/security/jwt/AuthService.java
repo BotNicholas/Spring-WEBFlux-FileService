@@ -164,16 +164,14 @@ public class AuthService {
     public JwtResponse exchangeOneTimeCode(@NonNull final OneTimeCodeRequest request) throws IOException {
         var user = usersService.getByUsername(request.getUsername()).orElseThrow(AuthenticationException::new);
         var oneTimeToken = user.getOneTimeToken();
-        user.setOneTimeToken(null);
 
         if (getSha256Hash(request.getCode()).equals(oneTimeToken)) {
+            user.setOneTimeToken(null);
             createUserFolder(user);
             user.setVerified(true);
             usersService.save(user);
             return getTokens(user);
         }
-
-        usersService.save(user);
 
         throw new AuthenticationException("You provided wrong one-time code");
     }
