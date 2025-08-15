@@ -94,7 +94,7 @@ public class FilesController {
     @PostMapping("/create/directory")
     public ResponseEntity<File> createDirectory(final @RequestBody CreateDirectoryRequest request,
                                                 final JwtAuthentication authentication) throws IOException {
-        var user = usersService.getByUsername(authentication.getUsername()).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(authentication.getUsername()).orElseThrow(() -> new UserNotFoundException(authentication.getUsername()));
         return filesService.createDirectoryAtForUser(request.getPath(), request.getName(), user);
     }
 

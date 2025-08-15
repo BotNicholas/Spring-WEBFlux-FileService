@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface UsersRepository extends JpaRepository<Users, UUID> {
     public Optional<Users> findByUsername(String username);
+
+    public Optional<Users> findByPasswordResetToken(String token);
 }

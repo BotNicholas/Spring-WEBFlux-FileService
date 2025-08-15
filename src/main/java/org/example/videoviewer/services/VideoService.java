@@ -58,7 +58,7 @@ private String homeDir;
     public VideoResponse getVideo(final String videoPath,
                                           final String range) throws IOException {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         var filePath = Paths.get(getPath(videoPath, user));
         var totalBytes = Files.size(filePath);

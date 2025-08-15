@@ -2,6 +2,7 @@ package org.example.videoviewer.security.jwt;
 
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import io.micrometer.common.util.StringUtils;
 import jakarta.mail.MessagingException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -9,27 +10,36 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.videoviewer.enums.Roles;
 import org.example.videoviewer.exceptions.AuthenticationException;
 import org.example.videoviewer.exceptions.FileExistsException;
+import org.example.videoviewer.exceptions.UserNotFoundException;
 import org.example.videoviewer.mail.Mailer;
 import org.example.videoviewer.repositories.model.Users;
+import org.example.videoviewer.security.jwt.dto.PasswordResetRequest;
+import org.example.videoviewer.security.jwt.dto.RequestPasswordResetRequest;
 import org.example.videoviewer.services.FilesService;
 import org.example.videoviewer.services.UsersService;
 import org.example.videoviewer.security.jwt.dto.JwtRequest;
 import org.example.videoviewer.security.jwt.dto.JwtResponse;
 import org.example.videoviewer.security.jwt.dto.OneTimeCodeRequest;
 import org.example.videoviewer.security.jwt.dto.RegistrationRequest;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.text.MessageFormat;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
 import static org.example.videoviewer.mail.Templates.ONE_TIME_CODE_MESSAGE_TEMPLATE;
+import static org.example.videoviewer.mail.Templates.PASSWORD_RESET_MESSAGE_TEMPLATE;
+import static org.example.videoviewer.mail.Templates.PASSWORD_RESET_REQUEST_MESSAGE_TEMPLATE;
 
 @Service
 @RequiredArgsConstructor
@@ -43,14 +53,18 @@ public class AuthService {
 
     private static final HashFunction hasher = Hashing.sha256();
     private static final Random random = new Random();
+    private final SecureRandom secureRandom = new SecureRandom();
+    private final JavaMailSenderImpl mailSender;
+
+    @Value("${application.password-reset.url}") private String passwordResetUrl;
 
     private final Map<String, String> jwtRefreshTokenStore = new HashMap<>();
 
     public void login(final @NonNull JwtRequest request) throws MessagingException, FileNotFoundException {
         var user = usersService.getByUsername(request.getLogin()).orElseThrow(AuthenticationException::new);
-        if (!user.getVerified()) {
-            throw new AuthenticationException("User is not verified");
-        }
+//        if (!user.getVerified()) {
+//            throw new AuthenticationException("User is not verified");
+//        }
 
         if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             var oneTimeCode = generateOneTimeCode(user);
@@ -174,5 +188,44 @@ public class AuthService {
         }
 
         throw new AuthenticationException("You provided wrong one-time code");
+    }
+
+    public void requestPasswordReset(final RequestPasswordResetRequest request) throws MessagingException, FileNotFoundException {
+        var user = usersService.getByUsername(request.getUsername()).orElseThrow(() -> new UserNotFoundException(request.getUsername()));
+//        if (!user.getVerified()) {
+//            throw new AuthenticationException("Activate your account first to reset the password");
+//        }
+        var token = generateRandomToken();
+        user.setPasswordResetToken(token);
+        usersService.save(user);
+
+        mailer.sendHtmlMail(
+                user.getEmail(),
+                "Password Reset",
+                String.format(
+                        PASSWORD_RESET_REQUEST_MESSAGE_TEMPLATE,
+                        (user.getName() + " " + user.getSurname()),
+                        String.format("%s?token=%s", passwordResetUrl, token),
+                        passwordResetUrl));
+    }
+
+    private String generateRandomToken() {
+        var randomBytes = new byte[32];
+        secureRandom.nextBytes(randomBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    public void resetPassword(final PasswordResetRequest request) throws MessagingException, FileNotFoundException {
+        if (StringUtils.isEmpty(request.getToken())) {
+            throw new AuthenticationException("Token is empty");
+        }
+
+        var user = usersService.getByPasswordResetToken(request.getToken()).orElseThrow(() -> new UserNotFoundException());
+
+        user.setPasswordResetToken(null);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        usersService.save(user);
+
+        mailer.sendHtmlMail(user.getEmail(), "Password Reset", String.format(PASSWORD_RESET_MESSAGE_TEMPLATE, (user.getName() + " " + user.getSurname())));
     }
 }

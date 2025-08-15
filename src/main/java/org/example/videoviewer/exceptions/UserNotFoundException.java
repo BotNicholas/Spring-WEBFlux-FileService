@@ -8,6 +8,10 @@ import static org.example.videoviewer.exceptions.Constants.Templates.USER_NOT_FO
 
 @ResponseStatus(value = HttpStatus.BAD_REQUEST)
 public class UserNotFoundException extends BaseException {
+    public UserNotFoundException(final String username) {
+        super(String.format(USER_NOT_FOUND_ERROR_TEMPLATE, String.format("'%s'", username)));
+    }
+
     public UserNotFoundException() {
         super(USER_NOT_FOUND_ERROR_TEMPLATE);
     }

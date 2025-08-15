@@ -50,7 +50,7 @@ public class FilesService {
                                       final long page,
                                       final long size) {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         PageFilesResponse response = new PageFilesResponse();
 
@@ -94,7 +94,7 @@ public class FilesService {
 
     public ResponseEntity<FileSystemResource> getFile(String path) throws IOException {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         Path filePath = Paths.get(getPath(path, user));
 
@@ -131,7 +131,7 @@ public class FilesService {
 
     public ResponseEntity<List<org.example.videoviewer.models.File>> importFiles(final FilesRequest request, final List<MultipartFile> files) throws IOException {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         var filesList = new ArrayList<org.example.videoviewer.models.File>();
         for (MultipartFile file : files) {
@@ -163,7 +163,7 @@ public class FilesService {
 
     public ResponseEntity<Void> deleteFile(final String path) throws IOException {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         var normalizedPath = Paths.get(getPath(path, user));
 
@@ -212,7 +212,7 @@ public class FilesService {
 
     public Resource getImage(String filePath, FileType type) {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         Path path = getCorrectFileImagePath(filePath, type, user);
         return new FileSystemResource(path);
@@ -220,7 +220,7 @@ public class FilesService {
 
     public Resource getScaledImage(String filePath, FileType type) throws IOException {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         Path path = getCorrectFileImagePath(filePath, type, user);
         var image = Scalr.resize(ImageIO.read(path.toFile()), Scalr.Method.SPEED, Scalr.Mode.AUTOMATIC, 320, 180, Scalr.OP_ANTIALIAS);
@@ -231,7 +231,7 @@ public class FilesService {
 
     public ResponseEntity<Resource> getImageResponse(String filePath, FileType type) throws IOException, InterruptedException {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         ResponseEntity<Resource> response;
 
@@ -247,7 +247,7 @@ public class FilesService {
 
     public ResponseEntity<Resource> getScaledImageResponse(String filePath, FileType type) throws IOException, InterruptedException {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        var user = usersService.getByUsername(username).orElseThrow(UserNotFoundException::new);
+        var user = usersService.getByUsername(username).orElseThrow(() -> new UserNotFoundException(username));
 
         ResponseEntity<Resource> response;
 

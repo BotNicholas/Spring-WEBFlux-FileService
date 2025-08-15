@@ -24,6 +24,10 @@ public class UsersService {
         return repository.findByUsername(username);
     }
 
+    public Optional<Users> getByPasswordResetToken(final String token) {
+        return repository.findByPasswordResetToken(token);
+    }
+
     public Users save(final Users user) {
         return repository.save(user);
     }
