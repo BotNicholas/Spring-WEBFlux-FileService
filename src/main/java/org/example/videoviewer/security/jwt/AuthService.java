@@ -176,7 +176,7 @@ public class AuthService {
     }
 
     public JwtResponse exchangeOneTimeCode(@NonNull final OneTimeCodeRequest request) throws IOException {
-        var user = usersService.getByUsername(request.getUsername()).orElseThrow(AuthenticationException::new);
+        var user = usersService.getByUsername(request.getUsername()).orElseThrow(() -> new AuthenticationException("You provided wrong one-time code"));
         var oneTimeToken = user.getOneTimeToken();
 
         if (getSha256Hash(request.getCode()).equals(oneTimeToken)) {
