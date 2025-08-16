@@ -206,7 +206,7 @@ public class AuthService {
                         PASSWORD_RESET_REQUEST_MESSAGE_TEMPLATE,
                         (user.getName() + " " + user.getSurname()),
                         String.format("%s?token=%s", passwordResetUrl, token),
-                        passwordResetUrl));
+                        "Click Here!"));
     }
 
     private String generateRandomToken() {
