@@ -1,5 +1,9 @@
 package org.example.videoviewer.controllers;
 
+import lombok.RequiredArgsConstructor;
+import org.example.videoviewer.security.jwt.AuthService;
+import org.example.videoviewer.security.jwt.dto.JwtAuthentication;
+import org.example.videoviewer.security.jwt.dto.VideoSighRequest;
 import org.example.videoviewer.services.VideoService;
 import org.example.videoviewer.services.models.VideoResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,11 +16,12 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.IOException;
 import java.util.Base64;
 
+@RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @RestController
 public class VideoController {
-    @Autowired
-    VideoService videoService;
+    private final VideoService videoService;
+    private final AuthService authService;
 
     //todo: must be removed
     @GetMapping(value = "/default/video/{fileName}", produces = "video/mp4")
@@ -54,6 +59,19 @@ public class VideoController {
         headers.setContentLength(videoResponse.getEnd() - videoResponse.getStart() + 1);
 
         return headers;
+    }
+
+
+    @PostMapping("/video/sign")
+    public ResponseEntity<String> signVideo(final @RequestBody VideoSighRequest request, final JwtAuthentication authentication) {
+        try {
+            return ResponseEntity.ok(authService.sighVideoAt(new String(Base64.getDecoder().decode(request.getUrl())), authentication));
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("Illegal base64 character")) {
+                throw new RuntimeException("Illegal base64 encoding");
+            }
+            throw new RuntimeException(e);
+        }
     }
 }
 /**

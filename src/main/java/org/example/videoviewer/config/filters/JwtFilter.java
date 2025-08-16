@@ -1,5 +1,6 @@
 package org.example.videoviewer.config.filters;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,8 +28,8 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var token = extractToken(request);
-        if (token != null && jwtProvider.validateAccessToken(token)) {
-            var claims = jwtProvider.getAccessClaims(token);
+        if (token != null && validateToken(token, request)) {
+            var claims = getClaimsFromToken(token, request);
             var authentication = JwtAuthentication.builder()
                     .username(claims.getSubject())
                     .roles(claims.get("roles", List.class))
@@ -45,10 +46,35 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private String extractToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        if(isVideoRequested(request)) {
+            return request.getParameter("token");
+        } else {
+            var bearerToken = request.getHeader(AUTHORIZATION_HEADER);
+            if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+                return bearerToken.substring(7);
+            }
         }
         return null;
+    }
+
+    private boolean isVideoRequested(HttpServletRequest request) {
+        var uri = request.getRequestURI();
+        return uri.startsWith("/video/") && !uri.contains("sign");
+    }
+
+    private boolean validateToken(String token, HttpServletRequest request) {
+        if(isVideoRequested(request)) {
+            return jwtProvider.validateStreamingToken(token);
+        } else {
+            return jwtProvider.validateAccessToken(token);
+        }
+    }
+
+    private Claims getClaimsFromToken(String token, HttpServletRequest request) {
+        if(isVideoRequested(request)) {
+            return jwtProvider.getStreamingClaims(token);
+        } else {
+            return jwtProvider.getAccessClaims(token);
+        }
     }
 }

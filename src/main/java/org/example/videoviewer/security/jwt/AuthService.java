@@ -23,8 +23,11 @@ import org.example.videoviewer.security.jwt.dto.OneTimeCodeRequest;
 import org.example.videoviewer.security.jwt.dto.RegistrationRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -227,5 +230,13 @@ public class AuthService {
         usersService.save(user);
 
         mailer.sendHtmlMail(user.getEmail(), "Password Reset", String.format(PASSWORD_RESET_MESSAGE_TEMPLATE, (user.getName() + " " + user.getSurname())));
+    }
+
+    public String sighVideoAt(final String path, final Authentication authentication) {
+        var user = usersService.getByUsername(authentication.getName()).orElseThrow(() -> new UserNotFoundException());
+
+        var token = jwtProvider.generateStreamingToken(user);
+
+        return UriComponentsBuilder.fromUriString(path).queryParam("token", token).toUriString();
     }
 }
