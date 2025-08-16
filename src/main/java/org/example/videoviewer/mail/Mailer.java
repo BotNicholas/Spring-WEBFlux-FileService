@@ -2,6 +2,7 @@ package org.example.videoviewer.mail;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.mail.SimpleMailMessage;
@@ -12,11 +13,14 @@ import org.springframework.util.ResourceUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
+@RequiredArgsConstructor
 public class Mailer {
-    @Autowired
-    JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
+    private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
     public void sendSimpleMail(final String to, final String subject, final String text) {
         SimpleMailMessage message = new SimpleMailMessage();
@@ -24,7 +28,9 @@ public class Mailer {
         message.setSubject(subject);
         message.setText(text);
 
-        mailSender.send(message);
+        executorService.submit(() -> {
+            mailSender.send(message);
+        });
     }
 
     public void sendHtmlMail(final String to, final String subject, final String text) throws MessagingException, FileNotFoundException {
@@ -33,7 +39,10 @@ public class Mailer {
         messageHelper.setTo(to);
         messageHelper.setSubject(subject);
         messageHelper.setText(text, true);
-        mailSender.send(mimeMessage);
+
+        executorService.submit(() -> {
+            mailSender.send(mimeMessage);
+        });
     }
 
     public void sendMailWithAttachment(final String to, final String subject, final String text, final File file) throws MessagingException, FileNotFoundException {
@@ -43,6 +52,9 @@ public class Mailer {
         messageHelper.setSubject(subject);
         messageHelper.setText(text, true);
         messageHelper.addAttachment("Cat.jpg", file);
-        mailSender.send(mimeMessage);
+
+        executorService.submit(() -> {
+            mailSender.send(mimeMessage);
+        });
     }
 }
