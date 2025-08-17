@@ -163,9 +163,10 @@ public class AuthService {
     private JwtResponse getTokens(final Users user) {
         var accessToken = jwtProvider.generateAccessToken(user);
         var refreshToken = jwtProvider.generateRefreshToken(user);
+        var streamingToken = jwtProvider.generateStreamingToken(user);
         jwtRefreshTokenStore.put(user.getUsername(), refreshToken);
 
-        return JwtResponse.builder().accessToken(accessToken).refreshToken(refreshToken).build();
+        return JwtResponse.builder().accessToken(accessToken).refreshToken(refreshToken).streamingToken(streamingToken).build();
     }
 
     private void createUserFolder(final Users user) throws IOException {

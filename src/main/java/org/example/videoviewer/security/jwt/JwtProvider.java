@@ -58,7 +58,7 @@ public class JwtProvider {
 
     public String generateStreamingToken(final Users user) {
         var now = LocalDateTime.now();
-        var expirationInstant = now.plusSeconds(10).atZone(ZoneId.systemDefault()).toInstant();
+        var expirationInstant = now.plusHours(2).atZone(ZoneId.systemDefault()).toInstant();
 //        var expirationInstant = now.plusMinutes(1).atZone(ZoneId.systemDefault()).toInstant();
         var expirationDate = Date.from(expirationInstant);
 

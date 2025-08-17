@@ -1,6 +1,8 @@
 package org.example.videoviewer.controllers;
 
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jdk.jshell.spi.ExecutionControl;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,8 @@ import org.example.videoviewer.security.jwt.dto.OneTimeCodeRequest;
 import org.example.videoviewer.security.jwt.dto.PasswordResetRequest;
 import org.example.videoviewer.security.jwt.dto.RegistrationRequest;
 import org.example.videoviewer.security.jwt.dto.RequestPasswordResetRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/auth")
@@ -40,8 +45,28 @@ public class AuthController {
     }
 
     @PostMapping("/exchange-one-time-code")
-    public ResponseEntity<JwtResponse> exchangeOneTimeCode(@RequestBody OneTimeCodeRequest oneTimeCodeRequest) throws IOException {
-        return ResponseEntity.ok(authService.exchangeOneTimeCode(oneTimeCodeRequest));
+    public ResponseEntity<JwtResponse> exchangeOneTimeCode(@RequestBody OneTimeCodeRequest oneTimeCodeRequest/*, HttpServletResponse response*/) throws IOException {
+        var jwtResponse = authService.exchangeOneTimeCode(oneTimeCodeRequest);
+
+//        Cookie cookie = new Cookie("ACCESS_TOKEN", jwtResponse.getAccessToken());
+//        cookie.setHttpOnly(true);
+//        cookie.setSecure(false);
+//        cookie.setPath("/");
+//        cookie.setMaxAge(15 * 60);
+//
+//        response.addCookie(cookie);
+
+        ResponseCookie cookie = ResponseCookie.from("STREAM_TOKEN", jwtResponse.getStreamingToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ofMinutes(15))
+                .sameSite("Lax")
+                .build();
+
+        jwtResponse.setStreamingToken(null);
+
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(jwtResponse);
     }
 
     @PostMapping("/refresh-access")

@@ -33,7 +33,11 @@ public class VideoController {
     }
 
     @GetMapping(value = "/video/play", produces = "video/mp4")
-    public ResponseEntity<StreamingResponseBody> playVideo(@RequestParam("video") String videoPath, @RequestHeader("Range") String range) throws IOException {
+    public ResponseEntity<StreamingResponseBody> playVideo(final @CookieValue(name = "STREAM_TOKEN", required = false) String token,
+                                                           final @RequestParam("video") String videoPath,
+                                                           final @RequestHeader("Range") String range) throws IOException {
+        System.out.println(token);
+
         System.out.println("Playing video in range " + range);
         System.out.println("Requested video: " + new String(Base64.getDecoder().decode(videoPath)));
         try {
@@ -59,19 +63,6 @@ public class VideoController {
         headers.setContentLength(videoResponse.getEnd() - videoResponse.getStart() + 1);
 
         return headers;
-    }
-
-
-    @PostMapping("/video/sign")
-    public ResponseEntity<String> signVideo(final @RequestBody VideoSighRequest request, final JwtAuthentication authentication) {
-        try {
-            return ResponseEntity.ok(authService.sighVideoAt(new String(Base64.getDecoder().decode(request.getUrl())), authentication));
-        } catch (IllegalArgumentException e) {
-            if (e.getMessage().contains("Illegal base64 character")) {
-                throw new RuntimeException("Illegal base64 encoding");
-            }
-            throw new RuntimeException(e);
-        }
     }
 }
 /**

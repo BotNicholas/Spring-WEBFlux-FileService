@@ -40,6 +40,7 @@ public class SecurityConfig {
                     config.setAllowedOrigins(corsUrls);
                     config.setAllowedMethods(corsMethods);
                     config.setAllowedHeaders(corsHeaders);
+                    config.setAllowCredentials(true);
 
                     return config;
                 }))

@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.example.videoviewer.exceptions.AuthenticationException;
 import org.example.videoviewer.security.jwt.JwtProvider;
 import org.example.videoviewer.security.jwt.dto.JwtAuthentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,6 +15,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -47,7 +49,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private String extractToken(HttpServletRequest request) {
         if(isVideoRequested(request)) {
-            return request.getParameter("token");
+            return Arrays.stream(request.getCookies()).filter(c -> c.getName().equals("STREAM_TOKEN")).findFirst().orElseThrow(() -> new AuthenticationException("No stream token cookie provided")).getValue();
         } else {
             var bearerToken = request.getHeader(AUTHORIZATION_HEADER);
             if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
@@ -59,7 +61,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private boolean isVideoRequested(HttpServletRequest request) {
         var uri = request.getRequestURI();
-        return uri.startsWith("/video/") && !uri.contains("sign");
+        return uri.startsWith("/video/");
     }
 
     private boolean validateToken(String token, HttpServletRequest request) {

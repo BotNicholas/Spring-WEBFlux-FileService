@@ -34,10 +34,12 @@ public class FilesController {
     private final UsersService usersService;
 
     @PostMapping
-    public ResponseEntity<FilesResponse> getFiles(final @RequestBody FilesRequest request,
+    public ResponseEntity<FilesResponse> getFiles(/*final @CookieValue(name = "ACCESS_TOKEN", required = false) String token,*/
+                                                  final @RequestBody FilesRequest request,
                                                   final @RequestParam long page,
                                                   final @RequestParam long size,
                                                   final JwtAuthentication authentication) {
+//        System.out.println(token);
         request.setPath(normalizePath(request.getPath()));
         var normalizedPage = page<1 ? 1 : page;
         var normalizedSize = size<1 ? 1 : size;

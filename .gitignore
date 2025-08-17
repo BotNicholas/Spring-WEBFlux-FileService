@@ -34,3 +34,7 @@ build/
 
 ### Other ENV ###
 .env
+
+### Certificates ###
+*.pem
+*.crt

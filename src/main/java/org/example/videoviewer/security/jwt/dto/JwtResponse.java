@@ -14,4 +14,5 @@ import lombok.NoArgsConstructor;
 public class JwtResponse {
     private String accessToken;
     private String refreshToken;
+    private String streamingToken;
 }
