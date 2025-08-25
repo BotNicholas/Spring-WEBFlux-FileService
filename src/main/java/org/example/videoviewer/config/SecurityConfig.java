@@ -28,6 +28,8 @@ public class SecurityConfig {
     private List<String> corsMethods;
     @Value("${application.cors.headers}")
     private List<String> corsHeaders;
+    @Value("${application.cors.exposed-headers}")
+    private List<String> corsExposedHeaders;
 
     private final JwtFilter jwtFilter;
 
@@ -41,6 +43,7 @@ public class SecurityConfig {
                     config.setAllowedOrigins(corsUrls);
                     config.setAllowedMethods(corsMethods);
                     config.setAllowedHeaders(corsHeaders);
+                    config.setExposedHeaders(corsExposedHeaders);
                     config.setAllowCredentials(true);
 
                     return config;
