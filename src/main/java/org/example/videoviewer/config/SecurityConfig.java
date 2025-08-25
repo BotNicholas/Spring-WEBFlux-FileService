@@ -1,5 +1,6 @@
 package org.example.videoviewer.config;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.example.videoviewer.config.filters.JwtFilter;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,8 +48,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(req -> req
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/**").authenticated())
+                        .anyRequest().authenticated())
                 .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
