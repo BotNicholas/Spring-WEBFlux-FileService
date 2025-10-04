@@ -126,10 +126,12 @@ public class AuthService {
             if (storedRefreshToken != null && storedRefreshToken.equals(refreshToken)) {
                 var user = usersService.getByUsername(username).orElseThrow(AuthenticationException::new);
                 var accessToken = jwtProvider.generateAccessToken(user);
+                var streamingToken = jwtProvider.generateStreamingToken(user);
 
                 return JwtResponse.builder()
                         .accessToken(accessToken)
                         .refreshToken(null)
+                        .streamingToken(streamingToken)
                         .build();
             }
         }
@@ -149,11 +151,13 @@ public class AuthService {
                 var user = usersService.getByUsername(username).orElseThrow(AuthenticationException::new);
                 var accessToken = jwtProvider.generateAccessToken(user);
                 var newRefreshToken = jwtProvider.generateRefreshToken(user);
+                var streamingToken = jwtProvider.generateStreamingToken(user);
                 jwtRefreshTokenStore.put(username, newRefreshToken);
 
                 return JwtResponse.builder()
                         .accessToken(accessToken)
                         .refreshToken(newRefreshToken)
+                        .streamingToken(streamingToken)
                         .build();
             }
         }

@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jdk.jshell.spi.ExecutionControl;
 import lombok.RequiredArgsConstructor;
+import org.example.videoviewer.controllers.dto.JwtResponseDTO;
 import org.example.videoviewer.security.jwt.AuthService;
 import org.example.videoviewer.security.jwt.dto.JwtRefreshRequest;
 import org.example.videoviewer.security.jwt.dto.JwtRequest;
@@ -45,7 +46,7 @@ public class AuthController {
     }
 
     @PostMapping("/exchange-one-time-code")
-    public ResponseEntity<JwtResponse> exchangeOneTimeCode(@RequestBody OneTimeCodeRequest oneTimeCodeRequest/*, HttpServletResponse response*/) throws IOException {
+    public ResponseEntity<JwtResponseDTO> exchangeOneTimeCode(@RequestBody OneTimeCodeRequest oneTimeCodeRequest/*, HttpServletResponse response*/) throws IOException {
         var jwtResponse = authService.exchangeOneTimeCode(oneTimeCodeRequest);
 
 //        Cookie cookie = new Cookie("ACCESS_TOKEN", jwtResponse.getAccessToken());
@@ -66,17 +67,46 @@ public class AuthController {
 
         jwtResponse.setStreamingToken(null);
 
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(jwtResponse);
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(JwtResponseDTO.builder()
+                .accessToken(jwtResponse.getAccessToken())
+                .refreshToken(jwtResponse.getRefreshToken())
+                .build());
     }
 
     @PostMapping("/refresh-access")
-    public ResponseEntity<JwtResponse> refreshAccess(@RequestBody JwtRefreshRequest refreshRequest) {
-        return ResponseEntity.ok(authService.getAccessToken(refreshRequest.getRefreshToken()));
+    public ResponseEntity<JwtResponseDTO> refreshAccess(@RequestBody JwtRefreshRequest refreshRequest) {
+        var jwtResponse = authService.getAccessToken(refreshRequest.getRefreshToken());
+
+        ResponseCookie cookie = ResponseCookie.from("STREAM_TOKEN", jwtResponse.getStreamingToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ofMinutes(15))
+                .sameSite("Lax")
+                .build();
+
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(JwtResponseDTO.builder()
+                .accessToken(jwtResponse.getAccessToken())
+                .refreshToken(jwtResponse.getRefreshToken())
+                .build());
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<JwtResponse> refresh(@RequestBody JwtRefreshRequest refreshRequest) {
-        return ResponseEntity.ok(authService.refreshTokens(refreshRequest.getRefreshToken()));
+    public ResponseEntity<JwtResponseDTO> refresh(@RequestBody JwtRefreshRequest refreshRequest) {
+        var jwtResponse = authService.refreshTokens(refreshRequest.getRefreshToken());
+
+        ResponseCookie cookie = ResponseCookie.from("STREAM_TOKEN", jwtResponse.getStreamingToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ofMinutes(15))
+                .sameSite("Lax")
+                .build();
+
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(JwtResponseDTO.builder()
+                .accessToken(jwtResponse.getAccessToken())
+                .refreshToken(jwtResponse.getRefreshToken())
+                .build());
     }
 
     @PostMapping("/password-reset/request")
