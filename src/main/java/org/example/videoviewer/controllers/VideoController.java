@@ -24,6 +24,7 @@ public class VideoController {
     private final AuthService authService;
 
     //todo: must be removed
+    @Deprecated
     @GetMapping(value = "/default/video/{fileName}", produces = "video/mp4")
     public ResponseEntity<StreamingResponseBody> defaultVideo(@PathVariable("fileName") String fileName, @RequestHeader("Range") String range) throws IOException {
         System.out.println("Playing video in range " + range);
@@ -36,14 +37,20 @@ public class VideoController {
     public ResponseEntity<StreamingResponseBody> playVideo(final @CookieValue(name = "STREAM_TOKEN", required = false) String token,
                                                            final @RequestParam("video") String videoPath,
                                                            final @RequestHeader("Range") String range) throws IOException {
-        System.out.println(token);
+        var responseEntity = ResponseEntity.status(HttpStatus.PARTIAL_CONTENT);
+
+        var cookie = authService.refreshStreamingCookieIfNeeded(token);
+
+        if (cookie == null) {
+            responseEntity.header(HttpHeaders.SET_COOKIE, cookie.toString());
+        }
 
         System.out.println("Playing video in range " + range);
         System.out.println("Requested video: " + new String(Base64.getDecoder().decode(videoPath)));
         try {
             var response = videoService.getVideo(new String(Base64.getDecoder().decode(videoPath)), range);
 
-            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).headers(buildHeaders(response)).body(response.getResponseBody());
+            return responseEntity.headers(buildHeaders(response)).body(response.getResponseBody());
         } catch (Exception e) {
             if (e.getMessage().contains("Illegal base64 character")) {
                 throw new RuntimeException("Illegal base64 encoding");

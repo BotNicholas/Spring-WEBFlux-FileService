@@ -1,8 +1,6 @@
 package org.example.videoviewer.controllers;
 
 import jakarta.mail.MessagingException;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jdk.jshell.spi.ExecutionControl;
 import lombok.RequiredArgsConstructor;
@@ -10,11 +8,11 @@ import org.example.videoviewer.controllers.dto.JwtResponseDTO;
 import org.example.videoviewer.security.jwt.AuthService;
 import org.example.videoviewer.security.jwt.dto.JwtRefreshRequest;
 import org.example.videoviewer.security.jwt.dto.JwtRequest;
-import org.example.videoviewer.security.jwt.dto.JwtResponse;
 import org.example.videoviewer.security.jwt.dto.OneTimeCodeRequest;
 import org.example.videoviewer.security.jwt.dto.PasswordResetRequest;
 import org.example.videoviewer.security.jwt.dto.RegistrationRequest;
 import org.example.videoviewer.security.jwt.dto.RequestPasswordResetRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +30,8 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+
+    @Value("${application.cookies.ttl-minutes}") private Integer cookieTtlMinutes;
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(@Valid @RequestBody RegistrationRequest registrationRequest) throws MessagingException, FileNotFoundException {
@@ -61,11 +61,11 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .maxAge(Duration.ofMinutes(15))
+                .maxAge(Duration.ofMinutes(cookieTtlMinutes))
                 .sameSite("Lax")
                 .build();
 
-        jwtResponse.setStreamingToken(null);
+        authService.addStreamingCookieToStore(jwtResponse.getStreamingToken(), cookie);
 
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(JwtResponseDTO.builder()
                 .accessToken(jwtResponse.getAccessToken())
@@ -81,9 +81,11 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .maxAge(Duration.ofMinutes(15))
+                .maxAge(Duration.ofMinutes(cookieTtlMinutes))
                 .sameSite("Lax")
                 .build();
+
+        authService.addStreamingCookieToStore(jwtResponse.getStreamingToken(), cookie);
 
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(JwtResponseDTO.builder()
                 .accessToken(jwtResponse.getAccessToken())
@@ -99,9 +101,11 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .maxAge(Duration.ofMinutes(15))
+                .maxAge(Duration.ofMinutes(cookieTtlMinutes))
                 .sameSite("Lax")
                 .build();
+
+        authService.addStreamingCookieToStore(jwtResponse.getStreamingToken(), cookie);
 
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(JwtResponseDTO.builder()
                 .accessToken(jwtResponse.getAccessToken())

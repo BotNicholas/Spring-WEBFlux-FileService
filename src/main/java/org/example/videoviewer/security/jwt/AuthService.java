@@ -15,6 +15,7 @@ import org.example.videoviewer.mail.Mailer;
 import org.example.videoviewer.repositories.model.Users;
 import org.example.videoviewer.security.jwt.dto.PasswordResetRequest;
 import org.example.videoviewer.security.jwt.dto.RequestPasswordResetRequest;
+import org.example.videoviewer.security.jwt.dto.StreamingTokenCookieModel;
 import org.example.videoviewer.services.FilesService;
 import org.example.videoviewer.services.UsersService;
 import org.example.videoviewer.security.jwt.dto.JwtRequest;
@@ -22,11 +23,11 @@ import org.example.videoviewer.security.jwt.dto.JwtResponse;
 import org.example.videoviewer.security.jwt.dto.OneTimeCodeRequest;
 import org.example.videoviewer.security.jwt.dto.RegistrationRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.UriBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.FileNotFoundException;
@@ -34,6 +35,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.text.MessageFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,8 +64,10 @@ public class AuthService {
     private final JavaMailSenderImpl mailSender;
 
     @Value("${application.password-reset.url}") private String passwordResetUrl;
+    @Value("${application.cookies.ttl-minutes}") private Integer cookieTtlMinutes;
 
     private final Map<String, String> jwtRefreshTokenStore = new HashMap<>();
+    private final Map<String, StreamingTokenCookieModel> streamingTokenStore = new HashMap<>();
 
     public void login(final @NonNull JwtRequest request) throws MessagingException, FileNotFoundException {
         var user = usersService.getByUsername(request.getLogin()).orElseThrow(AuthenticationException::new);
@@ -243,5 +249,35 @@ public class AuthService {
         var token = jwtProvider.generateStreamingToken(user);
 
         return UriComponentsBuilder.fromUriString(path).queryParam("token", token).toUriString();
+    }
+
+    public void addStreamingCookieToStore(final String token, final ResponseCookie cookie) {
+        var streamingTokenCookieModel = StreamingTokenCookieModel.builder()
+                .cookie(cookie)
+                .expiresAt(Instant.now().plus(Duration.ofMinutes(cookieTtlMinutes)))
+                .build();
+        streamingTokenStore.put(token, streamingTokenCookieModel);
+    }
+
+    public ResponseCookie refreshStreamingCookieIfNeeded(final String token) {
+        var sessionCookie = streamingTokenStore.get(token);
+
+        if (sessionCookie != null) {
+            var left = ChronoUnit.MINUTES.between(Instant.now(), sessionCookie.getExpiresAt());
+            if (left <= 5) {
+                var cookie = ResponseCookie.from("STREAM_TOKEN", token)
+                        .httpOnly(true)
+                        .secure(false)
+                        .path("/")
+                        .maxAge(Duration.ofMinutes(cookieTtlMinutes))
+                        .sameSite("Lax")
+                        .build();
+
+                addStreamingCookieToStore(token, cookie);
+                return cookie;
+            }
+        }
+
+        return null;
     }
 }

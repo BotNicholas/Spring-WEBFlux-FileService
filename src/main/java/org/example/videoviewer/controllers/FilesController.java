@@ -12,12 +12,10 @@ import org.example.videoviewer.models.PageFilesResponse;
 import org.example.videoviewer.security.jwt.dto.JwtAuthentication;
 import org.example.videoviewer.services.FilesService;
 import org.example.videoviewer.services.UsersService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
