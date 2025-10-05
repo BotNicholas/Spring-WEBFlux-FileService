@@ -2,11 +2,8 @@ package org.example.videoviewer.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.example.videoviewer.security.jwt.AuthService;
-import org.example.videoviewer.security.jwt.dto.JwtAuthentication;
-import org.example.videoviewer.security.jwt.dto.VideoSighRequest;
 import org.example.videoviewer.services.VideoService;
 import org.example.videoviewer.services.models.VideoResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +38,7 @@ public class VideoController {
 
         var cookie = authService.refreshStreamingCookieIfNeeded(token);
 
-        if (cookie == null) {
+        if (cookie != null) {
             responseEntity.header(HttpHeaders.SET_COOKIE, cookie.toString());
         }
 
