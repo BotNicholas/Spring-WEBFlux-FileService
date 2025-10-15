@@ -36,13 +36,19 @@ public class FFMpegImageExtractor {
         String frameFileName = Paths.get(videoPath).getFileName().toString() + ".png";
         Path outputPath = Paths.get(tmpImagePath, frameFileName);
 
-        String command = String.format("ffmpeg -y -i \"%s\" -frames:v 1 \"%s\"", videoPath, outputPath.toAbsolutePath());
-
-        Runtime rt = Runtime.getRuntime();
-        var pr = rt.exec(command);
-        pr.waitFor();
-//        System.out.println(new String(pr.getInputStream().readAllBytes()));
-//        System.err.println(new String(pr.getErrorStream().readAllBytes()));
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffmpeg", "-y",
+                "-i", videoPath,
+                "-frames:v", "1",
+                outputPath.toAbsolutePath().toString()
+        );
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        String log = new String(p.getInputStream().readAllBytes());
+        int exit = p.waitFor();
+        if (exit != 0 || !Files.exists(outputPath)) {
+            throw new IOException("ffmpeg failed (exit=" + exit + ")\n" + log);
+        }
 
         try (var imageInputStream = Files.newInputStream(outputPath)) {
             var image = Scalr.resize(ImageIO.read(imageInputStream), Scalr.Method.SPEED, Scalr.Mode.AUTOMATIC, 320, 180, Scalr.OP_ANTIALIAS);
